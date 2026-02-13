@@ -266,3 +266,13 @@ Computes the settlement for a game session.
 - Keep the UI clean and functional. Responsive design using Tailwind's responsive utilities.
 - All money calculations use integers (whole rupees) to avoid floating-point issues.
 - When making changes, always ensure the total-money invariant holds: `Σ(cashInHand) = Σ(buyInAmount × buyInCount)`.
+
+---
+
+## Planned Future Features
+
+### WhatsApp Share (v2)
+
+- Share settlement results via WhatsApp using a `wa.me` deep link or the Web Share API.
+- **Design for this now**: Keep settlement result rendering decoupled from display. The results component should produce a plain-text summary (e.g., "Player A pays ₹300 to Player B") that can be passed to a share function later without refactoring.
+- The results data structure (`Settlement[]`) should be easily serializable to a human-readable string.
