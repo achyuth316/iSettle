@@ -20,42 +20,28 @@ async function captureScreenshot(element: HTMLElement): Promise<Blob> {
   });
 }
 
-async function shareScreenshot(blob: Blob): Promise<void> {
-  const file = new File([blob], 'isettle-settlement.png', { type: 'image/png' });
-
-  if (navigator.canShare?.({ files: [file] })) {
-    await navigator.share({
-      title: 'iSettle — Poker Settlement',
-      files: [file],
-    });
-  } else {
-    // Fallback: download the image
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'isettle-settlement.png';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+async function copyScreenshotToClipboard(blob: Blob): Promise<void> {
+  await navigator.clipboard.write([
+    new ClipboardItem({ 'image/png': blob }),
+  ]);
 }
 
 export function Results({ result, onReset }: ResultsProps) {
   const { settlements, summary } = result;
   const captureRef = useRef<HTMLDivElement>(null);
-  const [sharing, setSharing] = useState(false);
+  const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'copied'>('idle');
 
   async function handleShare() {
     if (!captureRef.current) return;
-    setSharing(true);
+    setButtonState('capturing');
     try {
       const blob = await captureScreenshot(captureRef.current);
-      await shareScreenshot(blob);
+      await copyScreenshotToClipboard(blob);
+      setButtonState('copied');
+      setTimeout(() => setButtonState('idle'), 2000);
     } catch (err) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        console.error('Share failed:', err);
-      }
-    } finally {
-      setSharing(false);
+      console.error('Copy failed:', err);
+      setButtonState('idle');
     }
   }
 
@@ -123,10 +109,12 @@ export function Results({ result, onReset }: ResultsProps) {
       <div className="flex gap-3 px-4">
         <button
           onClick={handleShare}
-          disabled={sharing}
-          className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+          disabled={buttonState !== 'idle'}
+          className={`flex-1 text-white py-3 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 ${
+            buttonState === 'copied' ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'
+          }`}
         >
-          {sharing ? 'Capturing...' : 'Share via WhatsApp'}
+          {buttonState === 'capturing' ? 'Capturing...' : buttonState === 'copied' ? 'Copied!' : 'Share via WhatsApp'}
         </button>
         <button
           onClick={onReset}
