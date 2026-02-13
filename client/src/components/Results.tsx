@@ -1,4 +1,5 @@
 import type { SettleResponse } from '../../../shared/types';
+import { buildWhatsAppShareUrl } from '../utils/format';
 
 interface ResultsProps {
   result: SettleResponse;
@@ -67,12 +68,22 @@ export function Results({ result, onReset }: ResultsProps) {
         </table>
       </details>
 
-      <button
-        onClick={onReset}
-        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors"
-      >
-        New Game
-      </button>
+      <div className="flex gap-3">
+        <a
+          href={buildWhatsAppShareUrl(settlements)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-green-700 transition-colors text-center"
+        >
+          Share via WhatsApp
+        </a>
+        <button
+          onClick={onReset}
+          className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors"
+        >
+          New Game
+        </button>
+      </div>
     </div>
   );
 }

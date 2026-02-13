@@ -8,3 +8,10 @@ export function formatSettlementsAsText(settlements: Settlement[]): string {
     .map((s) => `${s.from} pays ₹${s.amount} to ${s.to}`)
     .join('\n');
 }
+
+export function buildWhatsAppShareUrl(settlements: Settlement[]): string {
+  const header = '*iSettle — Poker Settlement*\n\n';
+  const body = formatSettlementsAsText(settlements);
+  const text = encodeURIComponent(header + body);
+  return `https://wa.me/?text=${text}`;
+}
