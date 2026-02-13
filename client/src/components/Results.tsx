@@ -20,27 +20,37 @@ async function captureScreenshot(element: HTMLElement): Promise<Blob> {
   });
 }
 
-async function copyScreenshotToClipboard(blob: Blob): Promise<void> {
-  await navigator.clipboard.write([
-    new ClipboardItem({ 'image/png': blob }),
-  ]);
+async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied'> {
+  const file = new File([blob], 'isettle-settlement.png', { type: 'image/png' });
+
+  // Use native share sheet (works on mobile — lets user pick WhatsApp contacts)
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ title: 'iSettle — Poker Settlement', files: [file] });
+    return 'shared';
+  }
+
+  // Fallback for desktop: copy to clipboard
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+  return 'copied';
 }
 
 export function Results({ result, onReset }: ResultsProps) {
   const { settlements, summary } = result;
   const captureRef = useRef<HTMLDivElement>(null);
-  const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'copied'>('idle');
+  const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'shared' | 'copied'>('idle');
 
   async function handleShare() {
     if (!captureRef.current) return;
     setButtonState('capturing');
     try {
       const blob = await captureScreenshot(captureRef.current);
-      await copyScreenshotToClipboard(blob);
-      setButtonState('copied');
+      const result = await shareOrCopyScreenshot(blob);
+      setButtonState(result);
       setTimeout(() => setButtonState('idle'), 2000);
     } catch (err) {
-      console.error('Copy failed:', err);
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Share failed:', err);
+      }
       setButtonState('idle');
     }
   }
@@ -111,10 +121,10 @@ export function Results({ result, onReset }: ResultsProps) {
           onClick={handleShare}
           disabled={buttonState !== 'idle'}
           className={`flex-1 text-white py-3 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 ${
-            buttonState === 'copied' ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'
+            buttonState === 'shared' || buttonState === 'copied' ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'
           }`}
         >
-          {buttonState === 'capturing' ? 'Capturing...' : buttonState === 'copied' ? 'Copied!' : 'Share via WhatsApp'}
+          {buttonState === 'capturing' ? 'Capturing...' : buttonState === 'shared' ? 'Shared!' : buttonState === 'copied' ? 'Copied to clipboard!' : 'Share via WhatsApp'}
         </button>
         <button
           onClick={onReset}
