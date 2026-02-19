@@ -20,21 +20,17 @@ async function captureScreenshot(element: HTMLElement): Promise<Blob> {
   });
 }
 
-function canShareFiles(): boolean {
-  try {
-    const file = new File([], 'test.png', { type: 'image/png' });
-    return !!navigator.canShare?.({ files: [file] });
-  } catch {
-    return false;
-  }
+function isMobileDevice(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
 async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied'> {
-  const file = new File([blob], 'isettle-settlement.png', { type: 'image/png' });
-
-  if (canShareFiles()) {
-    await navigator.share({ title: 'iSettle — Poker Settlement', files: [file] });
-    return 'shared';
+  if (isMobileDevice()) {
+    const file = new File([blob], 'isettle-settlement.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ title: 'iSettle — Poker Settlement', files: [file] });
+      return 'shared';
+    }
   }
 
   await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -44,7 +40,7 @@ async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied'> {
 export function Results({ result, onReset }: ResultsProps) {
   const { settlements, summary } = result;
   const captureRef = useRef<HTMLDivElement>(null);
-  const isMobile = canShareFiles();
+  const isMobile = isMobileDevice();
   const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'shared' | 'copied'>('idle');
 
   async function handleShare() {
