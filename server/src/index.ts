@@ -14,8 +14,8 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/settle', settleRouter);
 
-app.listen(PORT, () => {
-  console.log(`iSettle server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`iSettle server running on http://0.0.0.0:${PORT}`);
 });
 
 export { app };
