@@ -24,7 +24,8 @@ function isMobileDevice(): boolean {
   return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied'> {
+async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied' | 'downloaded'> {
+  // Try native share (works on most mobile browsers)
   if (isMobileDevice()) {
     const file = new File([blob], 'isettle-settlement.png', { type: 'image/png' });
     if (navigator.canShare?.({ files: [file] })) {
@@ -33,15 +34,31 @@ async function shareOrCopyScreenshot(blob: Blob): Promise<'shared' | 'copied'> {
     }
   }
 
-  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-  return 'copied';
+  // Try clipboard write (works on desktop Chrome/Edge/Safari)
+  if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      return 'copied';
+    } catch {
+      // Clipboard write failed — fall through to download
+    }
+  }
+
+  // Fallback: download the image
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'isettle-settlement.png';
+  a.click();
+  URL.revokeObjectURL(url);
+  return 'downloaded';
 }
 
 export function Results({ result, onReset }: ResultsProps) {
   const { settlements, summary } = result;
   const captureRef = useRef<HTMLDivElement>(null);
   const isMobile = isMobileDevice();
-  const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'shared' | 'copied'>('idle');
+  const [buttonState, setButtonState] = useState<'idle' | 'capturing' | 'shared' | 'copied' | 'downloaded'>('idle');
 
   async function handleShare() {
     if (!captureRef.current) return;
@@ -125,7 +142,7 @@ export function Results({ result, onReset }: ResultsProps) {
           onClick={handleShare}
           disabled={buttonState !== 'idle'}
           className={`flex-1 text-white py-3 rounded-lg font-semibold text-lg transition-colors disabled:opacity-50 ${
-            buttonState === 'shared' || buttonState === 'copied' ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'
+            buttonState === 'shared' || buttonState === 'copied' || buttonState === 'downloaded' ? 'bg-emerald-500' : 'bg-green-600 hover:bg-green-700'
           }`}
         >
           {buttonState === 'capturing'
@@ -134,9 +151,11 @@ export function Results({ result, onReset }: ResultsProps) {
               ? 'Shared!'
               : buttonState === 'copied'
                 ? 'Copied!'
-                : isMobile
-                  ? 'Share Screenshot'
-                  : 'Copy to Clipboard'}
+                : buttonState === 'downloaded'
+                  ? 'Downloaded!'
+                  : isMobile
+                    ? 'Share Screenshot'
+                    : 'Copy to Clipboard'}
         </button>
         <button
           onClick={onReset}
